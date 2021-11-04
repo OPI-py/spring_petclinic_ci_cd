@@ -1,0 +1,62 @@
+---
+- hosts: "{{ our_hosts }}"
+  become: yes
+  remote_user: ec2-user
+  become_user: root
+  gather_facts: no
+  tasks:
+    - name: Display user and directory
+      shell: echo $USER $PWD
+      register: foo
+    - debug: msg="{{ foo.stdout }}"
+
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
+        update_only: yes
+
+    - name: Ensure a list of yum packages are installed
+      yum:
+        name: "{{ packages }}"
+        state: latest
+        update_cache: yes
+      vars:
+        packages:
+        - python-pip
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+        - amazon-linux-extras
+
+    #- name: Add extras repository
+    #  shell: yum-config-manager --enable extras
+
+    - name: Install the most recent Docker Engine package
+      shell: "amazon-linux-extras install docker -y"
+
+    - name: Start the Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add the ec2-user to the docker group so you can execute Docker commands without using sudo
+      shell: "sudo usermod -a -G docker ec2-user"
+
+    - name: Install jfrog CLI
+      shell: |
+        echo "[jfrog-cli]" > jfrog-cli.repo
+        echo "name=jfrog-cli" >> jfrog-cli.repo
+        echo "baseurl=https://releases.jfrog.io/artifactory/jfrog-rpms" >> jfrog-cli.repo
+        echo "enabled=1" >> jfrog-cli.repo; echo "gpgcheck=0" >> jfrog-cli.repo
+        sudo mv jfrog-cli.repo /etc/yum.repos.d/
+        yum install -y jfrog-cli-v2
+    
+    - name: Configure jfrog CLI
+      shell: jfrog config add artifactory-server --artifactory-url="https://projectartifactory.jfrog.io/artifactory" --user=<"user"> --password=<"password"> --interactive=false
+    
+    - name: Create directory
+      file:
+        path: /home/ec2-user/artifact
+        state: directory

@@ -1,0 +1,41 @@
+---
+- hosts: "{{ our_hosts }}"
+  become: yes
+  remote_user: ec2-user
+  become_user: root
+  gather_facts: no
+  tasks:
+    - name: Display user and directory
+      shell: echo $USER $PWD
+      register: foo
+    - debug: msg="{{ foo.stdout }}"
+    
+    - name: Update all pkg
+      yum:
+        name: '*'
+        state: latest
+    
+    - name: Install Amazon linux epel
+      command: amazon-linux-extras install epel -y
+    
+    - name: Install java8
+      yum:
+        name: java-1.8.0-openjdk-devel
+        state: present
+    
+    - name: Install jfrog CLI
+      shell: |
+        echo "[jfrog-cli]" > jfrog-cli.repo
+        echo "name=jfrog-cli" >> jfrog-cli.repo
+        echo "baseurl=https://releases.jfrog.io/artifactory/jfrog-rpms" >> jfrog-cli.repo
+        echo "enabled=1" >> jfrog-cli.repo; echo "gpgcheck=0" >> jfrog-cli.repo
+        sudo mv jfrog-cli.repo /etc/yum.repos.d/
+        yum install -y jfrog-cli-v2
+    
+    - name: Configure jfrog CLI
+      shell: jfrog config add artifactory-server --artifactory-url="https://projectartifactory.jfrog.io/artifactory" --user=<"user"> --password=<"password"> --interactive=false
+    
+    - name: Create directory
+      file:
+        path: /home/ec2-user/artifact
+        state: directory

@@ -1,0 +1,32 @@
+- hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+    #- name: Build docker image
+    #  docker_image:
+    #    name: petclinic:{{ lookup('env', 'BUILD_NUMBER') }}
+    #    build:
+    #      path: /home/jenkins/jfrog_artifact
+
+    - name: Build docker image
+      shell:
+        chdir: /home/jenkins/jfrog_artifact
+        cmd: docker build {{ lookup('env', 'WORKSPACE') }} -t petclinic:{{ lookup('env', 'BUILD_NUMBER') }} --build-arg BUILD_NUM={{ lookup('env', 'BUILD_NUMBER') }}
+
+    - name: Archive container image as a tarball
+      docker_image:
+        name: petclinic:{{ lookup('env', 'BUILD_NUMBER') }}
+        archive_path: /home/jenkins/jfrog_artifact/petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+        source: pull
+        state: present
+
+    - name: Fetch archived image
+      fetch:
+        src: /home/jenkins/jfrog_artifact/petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+        dest: ./petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+        flat: true
+
+    - name: Upload petclinic image
+      shell:
+        chdir: /home/jenkins/jfrog_artifact/
+        cmd: jfrog rt u ./petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar ci-cd-generic-local/

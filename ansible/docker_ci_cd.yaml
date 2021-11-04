@@ -1,0 +1,33 @@
+- hosts: docker_instance
+  become: yes
+  remote_user: ec2-user
+  become_user: root
+  tasks:
+    - name: Stop running containers
+      shell: docker kill $(docker ps -q) &
+
+    - name: Remove current containers
+      shell: docker rm $(docker ps -a -q) &
+
+    - name: Delete previous artifact
+      file:
+        name: /home/ec2-user/artifact/*.jar
+        state: absent
+
+    - name: Pull artifact
+      shell:
+        chdir: /home/ec2-user/artifact
+        cmd: jfrog rt dl ci-cd-generic-local/petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+
+    #- name: Load image from tarball
+    #  docker_image:
+    #    name: petclinic:{{ lookup('env', 'BUILD_NUMBER') }}
+    #    load_path: /home/ec2-user/artifact/petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+    #    state: present
+    #    source: load
+
+    - name: Load image from tarball
+      shell: docker load --input /home/ec2-user/artifact/petclinic_{{ lookup('env', 'BUILD_NUMBER') }}.tar
+
+    - name: Run docker container
+      shell: docker run -p 8080:8080 -d petclinic:{{ lookup('env', 'BUILD_NUMBER') }}

@@ -1,0 +1,21 @@
+---
+- hosts: qa_instance
+  become: yes
+  remote_user: ec2-user
+  become_user: root
+  tasks:
+    - name: Kill previous java process
+      shell: kill -9 `pidof java` &
+
+    #- name: Delete previous artifact
+    #  file:
+    #    name: /home/ec2-user/artifact/*.jar
+    #    state: absent
+
+    - name: Pull artifact
+      shell:
+        chdir: /home/ec2-user/artifact/
+        cmd: jfrog rt dl ci-cd-generic-local/spring-petclinic.{{ lookup('env', 'BUILD_NUMBER') }}.jar
+  
+    - name: Run application
+      shell: nohup java -jar /home/ec2-user/artifact/spring-petclinic.{{ lookup('env', 'BUILD_NUMBER') }}.jar server.port=${SERVER_PORT} &
