@@ -1,3 +1,3 @@
 # Spring Petclinic CI/CD Pipeline
 
-[![Image](images/ci-cd.png)](Pipeline)
+[![Pipeline](images/ci-cd.png)](images/ci-cd.png)
