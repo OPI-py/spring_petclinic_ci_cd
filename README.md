@@ -1,1 +1,3 @@
-# spring_petclinic_ci_cd
+# Spring Petclinic CI/CD Pipeline
+
+[![Image](images/ci-cd.png)](Pipeline)
